@@ -32,6 +32,8 @@ class AppRootView extends StatelessWidget {
 Widget getBody(context) {
   NavigationController navigation = Provider.of<NavigationController>(context);
   Widget body = Container();
+
+  /// Simple navigation controller for a single page application.
   switch (navigation.currentScreen) {
     case '/':
       body = const MainBody();
