@@ -45,13 +45,14 @@ Widget getBody(context) {
   return body;
 }
 
+/// This is the base widget of the main screen content.
+/// Each screen will have a base widget with similar structure but different content.
 class MainBody extends StatelessWidget {
   const MainBody({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     AppRootController rootController = context.watch<AppRootController>();
-    // print('rebuilding MainBody');
     return Stack(
       children: [
         // **********************************
