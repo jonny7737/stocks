@@ -15,6 +15,6 @@ class SoundManager {
 
   /// PlaySound event callback.
   void _playSound(String fileName) {
-    appEventBus.fire(Notify(EventStatus.success, '$fileName is playing'));
+    appEventBus.fire(Notify('$fileName is playing'));
   }
 }

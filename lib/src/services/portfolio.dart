@@ -35,7 +35,7 @@ class Portfolio {
     appEventBus.on<PriceChanged>().listen(checkTargets);
     _drp = DataRequestProcessor(serviceEndPoint);
     _openDB();
-    appEventBus.fire(Notify(EventStatus.success, 'Portfolio process initialized'));
+    appEventBus.fire(Notify('Portfolio process initialized'));
   }
 
   factory Portfolio() => _instance ??= Portfolio._internal();
@@ -109,15 +109,15 @@ class Portfolio {
     return _cpr.prices.isEmpty;
   }
 
-  void notify() {
-    //  TODO: Fire some kind of event to trigger a reload somewhere.
+  void notify(String message) {
+    appEventBus.fire(PortfolioUpdated(message));
   }
 
   Future<void> loadPortfolio() async {
     transactions = await transactionsFromDB();
     if (transactions.isNotEmpty) return;
 
-    appEventBus.fire(Notify(EventStatus.success, 'Portfolio loading startup data'));
+    appEventBus.fire(Notify('Portfolio loading startup data'));
 
     // Setup initial position, not for production.
     depositCash(dollars: 27.47, note: 'Cash at Fidelity');
@@ -130,7 +130,7 @@ class Portfolio {
     depositCash(dollars: 100.00, note: 'Adtl SFT x10');
     depositCash(dollars: 150.00, note: 'Adtl CGC x7@20');
 
-    appEventBus.fire(Notify(EventStatus.success, 'Current cash on hand: $cashOnHand'));
+    appEventBus.fire(Notify('Current cash on hand: $cashOnHand'));
 
     //  Initial positions
     bought(symbol: 'aapl', quantity: 2.0, price: 136.50);
@@ -145,7 +145,7 @@ class Portfolio {
     bought(symbol: 'cgc', quantity: 7.0, price: 20.10);
     sold(symbol: 'aapl', quantity: 6, price: 150.00);
 
-    appEventBus.fire(Notify(EventStatus.success, 'Current cash on hand: $cashOnHand'));
+    appEventBus.fire(Notify('Current cash on hand: $cashOnHand'));
 
     //**************************************************************
     //TODO:    Remove these entries after StockWatch UI is complete.
@@ -156,20 +156,13 @@ class Portfolio {
   }
 
   bool depositCash({required double dollars, String note = ''}) {
-    // cashOnHand += dollars;
     addMoney(dollars);
     recordTransaction(Transaction('', 'deposit', 1, dollars, null, note));
-    // a.log('\$$cashOnHand: deposit = $dollars   NOTE: '
-    //     '$note');
     return true;
   }
 
   double withdrawCash({required double dollars}) {
     var trans = dollars < cashOnHand ? dollars : cashOnHand;
-    // if (trans == cashOnHand)
-    //   cashOnHand = 0;
-    // else
-    // cashOnHand -= trans;
     subMoney(trans);
     recordTransaction(Transaction('', 'withdraw', 1, -trans));
     return trans;
@@ -184,7 +177,7 @@ class Portfolio {
     symbol = symbol.toUpperCase();
     if (price.isNaN) price = 0;
     if (!paperTrade && cashOnHand < price * quantity) {
-      appEventBus.fire(Notify(EventStatus.success, 'Purchase declined - Insufficient funds'));
+      appEventBus.fire(Notify('Purchase declined - Insufficient funds'));
       return false;
     }
     // if (watch == null || !watch) //  Do not log new Watches here
@@ -238,12 +231,12 @@ class Portfolio {
 
   void addMoney(double dollars) {
     _cashOnHand += dollars;
-    notify();
+    notify('Current cash on hand: $cashOnHand');
   }
 
   void subMoney(double dollars) {
     _cashOnHand -= dollars;
-    notify();
+    notify('Current cash on hand: $cashOnHand');
   }
 
   addWatch({required String symbol, double price = -double.infinity}) async {

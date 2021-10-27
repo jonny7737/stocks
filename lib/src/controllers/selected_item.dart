@@ -7,10 +7,7 @@ class SelectedItemController extends ChangeNotifier {
   int selectedItem = -1;
 
   void select(int itemIndex) {
-    appEventBus.fire(Notify(
-      EventStatus.success,
-      'Selected item: $itemIndex',
-    ));
+    appEventBus.fire(Notify('Selected item: $itemIndex'));
     selectedItem = itemIndex;
     notifyListeners();
   }

@@ -24,7 +24,7 @@ void main() async {
   // Print all events
   //  TODO: Add event logging level configuration to SettingsController
   appEventBus.on().listen(eventLog);
-  appEventBus.fire(Notify(EventStatus.success, 'Event bus online...'));
+  appEventBus.fire(Notify('Event bus online...'));
 
   currentPrices = CurrentPrices();
 

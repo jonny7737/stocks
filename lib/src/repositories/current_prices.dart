@@ -11,7 +11,7 @@ class CurrentPrices {
     appEventBus.on<PriceChange>().listen((event) {
       updatePrice(event.symbol, event.newPrice);
     });
-    appEventBus.fire(Notify(EventStatus.success, 'CurrentPrices repository is available'));
+    appEventBus.fire(Notify('CurrentPrices repository is available'));
   }
 
   factory CurrentPrices() => _instance ??= CurrentPrices._internal();

@@ -79,7 +79,7 @@ class AppRootController extends ChangeNotifier {
       default:
     }
 
-    appEventBus.fire(Notify(EventStatus.success, 'Widget $widget is Visible: $show'));
+    appEventBus.fire(Notify('Widget $widget is Visible: $show'));
     // if (show) {
     notifyListeners();
     // }

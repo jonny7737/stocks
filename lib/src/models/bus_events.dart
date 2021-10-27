@@ -25,7 +25,7 @@ class BusEvent {
 }
 
 class Notify extends BusEvent {
-  Notify(EventStatus status, String message) : super(status: status, message: message);
+  Notify(String message) : super(status: EventStatus.success, message: message);
 }
 
 class Navigation extends BusEvent {
@@ -53,4 +53,8 @@ class PlaySound extends BusEvent {
 
   PlaySound(EventStatus status, String message, this.soundFile)
       : super(status: status, message: message);
+}
+
+class PortfolioUpdated extends BusEvent {
+  PortfolioUpdated(String message) : super(status: EventStatus.success, message: message);
 }
