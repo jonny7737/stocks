@@ -4,12 +4,13 @@ import 'package:stocks/src/controllers/app_root.dart';
 import 'package:stocks/src/screens/app_widgets/confetti.dart';
 import 'package:stocks/src/screens/app_widgets/dummy_prices.dart';
 import 'package:stocks/src/screens/app_widgets/menu.dart';
+import 'package:stocks/src/screens/app_widgets/next_open.dart';
 import 'package:stocks/src/screens/sample_feature/sample_item_details_view.dart';
 
 import '/src/controllers/navigation.dart';
 import 'app_widgets/appbar.dart';
 
-/// Displays application main content.
+/// Displays application content.
 class AppRootView extends StatelessWidget {
   const AppRootView({Key? key}) : super(key: key);
 
@@ -29,11 +30,15 @@ class AppRootView extends StatelessWidget {
   }
 }
 
+/// Simple navigation controller for a single page application.
+///
+/// Navigation is used to select scaffold body content.
 Widget getBody(context) {
   NavigationController navigation = Provider.of<NavigationController>(context);
   Widget body = Container();
 
   /// Simple navigation controller for a single page application.
+  /// Navigation is used to select scaffold body content.
   switch (navigation.currentScreen) {
     case '/':
       body = const MainBody();
@@ -54,10 +59,20 @@ class MainBody extends StatelessWidget {
   Widget build(BuildContext context) {
     AppRootController rootController = context.watch<AppRootController>();
     return Stack(
+      alignment: Alignment.center,
+      textDirection: TextDirection.rtl,
       children: [
         // **********************************
         //  Current Prices
         if (rootController.doDummyPrices) const Positioned(top: 10, left: 5, child: DummyPrices()),
+
+        // **********************************
+        //  Siren Player
+        // const Positioned(top: 0, child: SirenPlayer()),
+
+        // **********************************
+        //  Next open date - time
+        Positioned(top: 10, child: NextOpen()),
 
         // **********************************
         //  Menu

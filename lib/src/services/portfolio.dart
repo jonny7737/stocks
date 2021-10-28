@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:iex/iex.dart';
+import 'package:intl/intl.dart';
 import 'package:objectdb/objectdb.dart';
 // ignore: implementation_imports
 import 'package:objectdb/src/objectdb_storage_filesystem.dart' show FileSystemStorage;
@@ -11,6 +12,8 @@ import 'package:stocks/src/models/bus_events.dart';
 import 'package:stocks/src/models/stock.dart';
 import 'package:stocks/src/models/transaction.dart';
 import 'package:stocks/src/repositories/current_prices.dart';
+import 'package:stocks/src/services/utils.dart';
+import 'package:timezone/timezone.dart';
 
 class Portfolio {
   final CurrentPrices _cpr = CurrentPrices();
@@ -25,22 +28,74 @@ class Portfolio {
   bool loadingTransactionDB = false;
   bool ready = false;
 
+  TZDateTime? nextOpen;
+  TZDateTime? nextClose;
+  Timer? marketCheckTimer;
+  Location eastern = getLocation('US/Eastern');
+  Location central = getLocation('US/Central');
+
   double _cashOnHand = 0.00;
 
   double get cashOnHand => double.parse(_cashOnHand.toStringAsFixed(2));
 
   static Portfolio? _instance;
 
+  factory Portfolio() => _instance ??= Portfolio._internal();
+
   Portfolio._internal() {
     appEventBus.on<PriceChanged>().listen(checkTargets);
     _drp = DataRequestProcessor(serviceEndPoint);
-    _openDB();
+    initPortfolio();
+    if (marketCheckTimer == null) marketCheck();
+  }
+
+  Future<void> initPortfolio() async {
+    await _openDB();
     appEventBus.fire(Notify('Portfolio process initialized'));
   }
 
-  factory Portfolio() => _instance ??= Portfolio._internal();
+  void marketCheck() {
+    if (marketCheckTimer == null) {
+      marketCheckTimer = Timer.periodic(const Duration(seconds: 2), checkMarketOC);
+    } else {
+      marketCheckTimer!.cancel();
+      marketCheckTimer = Timer.periodic(const Duration(minutes: 5), checkMarketOC);
+    }
+  }
 
-  _openDB() async {
+  int marketCheckCounter = 0;
+  Future<void> checkMarketOC(_) async {
+    if (marketCheckCounter == 5) {
+      marketCheckCounter++;
+      marketCheck();
+      return;
+    }
+    await setNextOpen();
+    await setNextClose();
+    if (marketCheckCounter < 6) marketCheckCounter++;
+  }
+
+  bool get marketIsOpen => TZDateTime.now(eastern).isBefore(nextClose ?? DateTime(0));
+
+  Future<void> setNextOpen() async {
+    String open = await _drp.nextMarketOpen();
+    nextOpen = TZDateTime.from(openDate(open), eastern).add(const Duration(hours: 8, minutes: 30));
+    open = DateFormat("yyyy-MM-dd HH:mm").format(nextOpen ?? DateTime(0));
+    notify('Market opens: $open');
+  }
+
+  Future<void> setNextClose() async {
+    if (nextOpen == null) return;
+
+    var now = TZDateTime.now(central);
+    if (now.day <= nextOpen!.day) {
+      nextClose = TZDateTime(eastern, now.year, now.month, now.day, 16, 00, 00);
+      String close = DateFormat("yyyy-MM-dd HH:mm").format(nextClose ?? DateTime(0));
+      notify('Market closes: $close');
+    }
+  }
+
+  Future<void> _openDB() async {
     Directory appDocDir = await getApplicationDocumentsDirectory();
     String dbFilePath = [appDocDir.path, 'transactions.db'].join('/');
 
@@ -54,9 +109,23 @@ class Portfolio {
 
     await loadPortfolio();
 
-    _currentPriceRepeat();
+    await _currentPriceRepeat();
 
     ready = true;
+  }
+
+  Future<void> _currentPriceRepeat() async {
+    if (!marketIsOpen) return;
+
+    if (await portfolioIsEmpty) return;
+    _cpr.prices.keys.toList().forEach((symbol) async {
+      late double newPrice;
+      do {
+        newPrice = await _drp.currentPrice(symbol: symbol);
+      } while (newPrice == -double.infinity);
+      _cpr.updatePrice(symbol, newPrice);
+      appEventBus.fire(Notify('$symbol: ${stocks[symbol]!.quantity} shares @ $newPrice'));
+    });
   }
 
   Future<bool> get portfolioReady async {
@@ -82,19 +151,6 @@ class Portfolio {
     if (targetHit) {
       appEventBus.fire(PlaySound(EventStatus.success, 'Play', 'TargetHit'));
     }
-  }
-
-  Future<void> _currentPriceRepeat() async {
-    // appEventBus.fire(
-    //     Notify(EventStatus.success, 'Getting current prices for ${_cpr.prices.length} stocks'));
-    if (await portfolioIsEmpty) return;
-    _cpr.prices.keys.toList().forEach((symbol) async {
-      late double newPrice;
-      do {
-        newPrice = await _drp.currentPrice(symbol: symbol);
-      } while (newPrice == -double.infinity);
-      _cpr.updatePrice(symbol, newPrice);
-    });
   }
 
   Future<bool> get portfolioIsEmpty async {

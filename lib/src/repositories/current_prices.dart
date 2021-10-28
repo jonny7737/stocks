@@ -20,7 +20,7 @@ class CurrentPrices {
   void updatePrice(String symbol, double newPrice) {
     if (prices[symbol] == newPrice) return;
     prices[symbol] = newPrice;
-    appEventBus.fire(PriceChanged(EventStatus.success, 'Price updated', symbol, newPrice));
+    appEventBus.fire(PriceChanged(EventStatus.success, '', symbol, newPrice));
   }
 
   /// Return the current price for symbol.

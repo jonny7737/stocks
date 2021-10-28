@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:stocks/src/controllers/app_root.dart';
+import 'package:stocks/src/controllers/portfolio_updated.dart';
 import 'package:stocks/src/controllers/price_change.dart';
 import 'package:stocks/src/controllers/selected_item.dart';
 import 'package:stocks/src/repositories/current_prices.dart';
@@ -41,6 +42,9 @@ void main() async {
       ),
       ListenableProvider<PriceChangeController>(
         create: (_) => PriceChangeController(),
+      ),
+      ListenableProvider<PortfolioUpdateController>(
+        create: (_) => PortfolioUpdateController(),
       ),
       ListenableProvider<SelectedItemController>(
         create: (_) => SelectedItemController(),
