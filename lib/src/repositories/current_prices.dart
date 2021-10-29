@@ -1,9 +1,11 @@
 import 'package:stocks/src/models/bus_events.dart';
+import 'package:stocks/src/models/stock.dart';
 
 import '/src/globals.dart';
 
 class CurrentPrices {
   Map<String, double> prices = {};
+  Map<String, Stock> stocks = {};
 
   static CurrentPrices? _instance;
 

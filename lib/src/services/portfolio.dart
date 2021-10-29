@@ -24,7 +24,7 @@ class Portfolio {
 
   static const Duration stockCheckInterval = Duration(seconds: 10);
 
-  final Map<String, Stock> stocks = {};
+  // final Map<String, Stock> stocks = {};
   Map<DateTime, Transaction> transactions = {};
   bool loadingTransactionDB = false;
   bool ready = false;
@@ -38,6 +38,8 @@ class Portfolio {
 
   /// Getter now returns TZDateTime.now(eastern)
   TZDateTime get now => TZDateTime.now(eastern);
+
+  Map<String, Stock> get stocks => _cpr.stocks;
 
   double _cashOnHand = 0.00;
 
@@ -90,7 +92,7 @@ class Portfolio {
     if (now.weekday <= 5) {
       nextOpen =
           TZDateTime(eastern, now.year, now.month, now.day, nextOpen!.hour, nextOpen!.minute);
-      if (now.isAfter(nextClose ?? DateTime(0))) nextOpen = nextOpen!.add(const Duration(days: 1));
+      // if (now.isAfter(nextClose ?? DateTime(0))) nextOpen = nextOpen!.add(const Duration(days: 1));
     }
 
     open = DateFormat("yyyy-MM-dd HH:mm").format(nextOpen ?? DateTime(0));
@@ -139,7 +141,7 @@ class Portfolio {
         newPrice = await _drp.currentPrice(symbol: symbol);
       } while (newPrice == -double.infinity);
       _cpr.updatePrice(symbol, newPrice);
-      appEventBus.fire(Notify('$symbol: ${stocks[symbol]!.quantity} shares @ $newPrice'));
+      // appEventBus.fire(Notify('$symbol: ${stocks[symbol]!.quantity} shares @ $newPrice'));
     });
     doneOnce = true;
   }
@@ -289,10 +291,11 @@ class Portfolio {
 
     if (stocks[symbol] == null) return false;
     if (quantity > stocks[symbol]!.quantity) return false;
-
-    stocks.putIfAbsent(symbol, () {
-      return Stock(quantity, -price);
-    });
+    if (quantity == stocks[symbol]!.quantity) {
+      stocks.remove(symbol);
+    } else {
+      stocks[symbol] = Stock(stocks[symbol]!.quantity - quantity, stocks[symbol]!.cost);
+    }
 
     addMoney(price * quantity);
     appEventBus.fire(PriceChange(EventStatus.in_process, 'Sell transaction', symbol, price));
