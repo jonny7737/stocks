@@ -4,13 +4,13 @@ import 'package:stocks/src/controllers/portfolio_updated.dart';
 import 'package:stocks/src/services/portfolio.dart';
 
 class NextOpen extends StatelessWidget {
-  NextOpen({Key? key}) : super(key: key);
-
-  ///  Portfolio service reference
-  final Portfolio portfolio = Portfolio();
+  const NextOpen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    ///  Portfolio service reference
+    final Portfolio portfolio = Portfolio();
+
     Provider.of<PortfolioUpdateController>(context);
     return Column(
       children: [

@@ -42,8 +42,8 @@ class AppRootController extends ChangeNotifier {
       confettiActive = false;
     });
 
-    //  Remove confetti from the screen after 11 seconds.
-    Timer(const Duration(seconds: 11), () {
+    //  Remove confetti from the screen after 12seconds.
+    Timer(const Duration(seconds: 12), () {
       notifyListeners();
     });
   }

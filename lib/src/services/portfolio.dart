@@ -13,6 +13,7 @@ import 'package:stocks/src/models/stock.dart';
 import 'package:stocks/src/models/transaction.dart';
 import 'package:stocks/src/repositories/current_prices.dart';
 import 'package:stocks/src/services/utils.dart';
+import 'package:timezone/standalone.dart';
 import 'package:timezone/timezone.dart';
 
 class Portfolio {
@@ -27,12 +28,16 @@ class Portfolio {
   Map<DateTime, Transaction> transactions = {};
   bool loadingTransactionDB = false;
   bool ready = false;
+  bool doneOnce = false;
 
   TZDateTime? nextOpen;
   TZDateTime? nextClose;
   Timer? marketCheckTimer;
   Location eastern = getLocation('US/Eastern');
   Location central = getLocation('US/Central');
+
+  /// Getter now returns TZDateTime.now(eastern)
+  TZDateTime get now => TZDateTime.now(eastern);
 
   double _cashOnHand = 0.00;
 
@@ -75,11 +80,19 @@ class Portfolio {
     if (marketCheckCounter < 6) marketCheckCounter++;
   }
 
-  bool get marketIsOpen => TZDateTime.now(eastern).isBefore(nextClose ?? DateTime(0));
+  bool get marketIsOpen =>
+      now.isBefore(nextClose ?? DateTime(0)) && now.isAfter(nextOpen ?? DateTime(0));
 
   Future<void> setNextOpen() async {
     String open = await _drp.nextMarketOpen();
     nextOpen = TZDateTime.from(openDate(open), eastern).add(const Duration(hours: 8, minutes: 30));
+
+    if (now.weekday <= 5) {
+      nextOpen =
+          TZDateTime(eastern, now.year, now.month, now.day, nextOpen!.hour, nextOpen!.minute);
+      if (now.isAfter(nextClose ?? DateTime(0))) nextOpen = nextOpen!.add(const Duration(days: 1));
+    }
+
     open = DateFormat("yyyy-MM-dd HH:mm").format(nextOpen ?? DateTime(0));
     notify('Market opens: $open');
   }
@@ -115,7 +128,9 @@ class Portfolio {
   }
 
   Future<void> _currentPriceRepeat() async {
-    if (!marketIsOpen) return;
+    if (!marketIsOpen &&
+        now.add(const Duration(minutes: 5)).isAfter(nextClose ?? DateTime(0)) &&
+        doneOnce) return;
 
     if (await portfolioIsEmpty) return;
     _cpr.prices.keys.toList().forEach((symbol) async {
@@ -126,6 +141,7 @@ class Portfolio {
       _cpr.updatePrice(symbol, newPrice);
       appEventBus.fire(Notify('$symbol: ${stocks[symbol]!.quantity} shares @ $newPrice'));
     });
+    doneOnce = true;
   }
 
   Future<bool> get portfolioReady async {
@@ -293,6 +309,45 @@ class Portfolio {
   void subMoney(double dollars) {
     _cashOnHand -= dollars;
     notify('Current cash on hand: $cashOnHand');
+  }
+
+  double get totalDeposits {
+    double total = 0.0;
+    transactions.forEach((k, v) {
+      // a.log('Total deposits: ${v.toJson()}');
+      if (v.action == 'deposit') total += v.cost;
+    });
+    return total;
+  }
+
+  double get totalWithdrawals {
+    double total = 0.0;
+    transactions.forEach((k, v) {
+      if (v.action == 'withdraw') total += v.cost;
+    });
+    return total;
+  }
+
+  double get startingBalance {
+    return totalDeposits - totalWithdrawals;
+  }
+
+  double get currentValue {
+    double value = 0.0;
+
+    stocks.forEach((k, v) {
+      value += v.quantity * _cpr.price(k);
+    });
+    return double.parse(value.toStringAsFixed(2));
+  }
+
+  double get currentInvestment {
+    double value = 0.0;
+
+    stocks.forEach((k, v) {
+      value += v.cost;
+    });
+    return double.parse(value.toStringAsFixed(2));
   }
 
   addWatch({required String symbol, double price = -double.infinity}) async {

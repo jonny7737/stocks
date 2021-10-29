@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stocks/src/controllers/app_root.dart';
+import 'package:stocks/src/controllers/portfolio_updated.dart';
 import 'package:stocks/src/screens/app_widgets/confetti.dart';
+import 'package:stocks/src/screens/app_widgets/current_position.dart';
 import 'package:stocks/src/screens/app_widgets/dummy_prices.dart';
 import 'package:stocks/src/screens/app_widgets/menu.dart';
 import 'package:stocks/src/screens/app_widgets/next_open.dart';
+import 'package:stocks/src/screens/app_widgets/siren_player.dart';
 import 'package:stocks/src/screens/sample_feature/sample_item_details_view.dart';
 
 import '/src/controllers/navigation.dart';
@@ -58,6 +61,7 @@ class MainBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     AppRootController rootController = context.watch<AppRootController>();
+    context.watch<PortfolioUpdateController>();
     return Stack(
       alignment: Alignment.center,
       textDirection: TextDirection.rtl,
@@ -68,11 +72,15 @@ class MainBody extends StatelessWidget {
 
         // **********************************
         //  Siren Player
-        // const Positioned(top: 0, child: SirenPlayer()),
+        const Positioned(top: 0, child: SirenPlayer()),
+
+        // **********************************
+        //  Siren Player
+        const Positioned(top: 0, child: CurrentPosition()),
 
         // **********************************
         //  Next open date - time
-        Positioned(top: 10, child: NextOpen()),
+        const Positioned(top: 10, right: 10, child: NextOpen()),
 
         // **********************************
         //  Menu
