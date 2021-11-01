@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stocks/src/controllers/navigation.dart';
+import 'package:stocks/src/controllers/sound_enable.dart';
+import 'package:stocks/src/globals.dart';
 
 import '/src/controllers/app_root.dart';
 
@@ -75,12 +77,39 @@ class MenuWidget extends StatelessWidget {
             child: Text(
               'Activity Log',
               style: ts.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.left,
             ),
             onTap: () {
               // context.read(appViewModelProvider).toggleActivityWidget();
               context.read<AppRootController>().toggleMenu();
               context.read<AppRootController>().throwConfetti();
             },
+          ),
+
+          const Divider(color: Colors.grey, height: 5),
+
+          //  Enable / disable sound effects
+          Center(
+            child: Container(
+              margin: const EdgeInsets.all(0),
+              child: Consumer(builder: (context, watch, child) {
+                var sc = Provider.of<SoundController>(context);
+                return CheckboxListTile(
+                  value: soundEnabled,
+                  checkColor: Colors.black,
+                  contentPadding: const EdgeInsets.all(0),
+                  // activeColor: Colors.white54,
+                  dense: true,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  title: Text('Toggle sound effects',
+                      style: ts.copyWith(fontWeight: FontWeight.bold, fontSize: 14)),
+                  onChanged: (bool? newValue) {
+                    sc.toggleSound(newValue ?? false);
+                  },
+                  // context.read(appViewModelProvider).toggleAutoHideActivityWidget,
+                );
+              }),
+            ),
           ),
         ],
       ),

@@ -7,6 +7,7 @@ import 'package:stocks/src/controllers/pop_sound.dart';
 import 'package:stocks/src/controllers/portfolio_updated.dart';
 import 'package:stocks/src/controllers/price_change.dart';
 import 'package:stocks/src/controllers/selected_item.dart';
+import 'package:stocks/src/controllers/sound_enable.dart';
 import 'package:stocks/src/repositories/current_prices.dart';
 import 'package:stocks/src/services/sound_manager.dart';
 import 'package:timezone/data/latest.dart';
@@ -54,6 +55,9 @@ void main() async {
       ),
       ListenableProvider<PopSoundController>(
         create: (_) => PopSoundController(),
+      ),
+      ListenableProvider<SoundController>(
+        create: (_) => SoundController(),
       ),
     ],
     child: StocksApp(settingsController: settingsController),

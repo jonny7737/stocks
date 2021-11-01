@@ -87,6 +87,7 @@ class Portfolio {
 
   Future<void> setNextOpen() async {
     String open = await _drp.nextMarketOpen();
+    // notify('Market opens: $open');
     nextOpen = TZDateTime.from(openDate(open), eastern).add(const Duration(hours: 8, minutes: 30));
     if (now.weekday <= 5) {
       nextOpen =
@@ -152,7 +153,6 @@ class Portfolio {
       _cpr.updatePrice(symbol, newPrice);
     });
     doneOnce = true;
-    soundEnabled = true;
   }
 
   Future<bool> get portfolioReady async {
