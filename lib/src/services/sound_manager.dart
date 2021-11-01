@@ -3,11 +3,17 @@ import 'package:stocks/src/models/bus_events.dart';
 
 import '/src/globals.dart';
 
-/// Event listener for PlaySound events.
 class SoundManager {
   static SoundManager? _instance;
 
+  /// Sound effects manager / player.
+  /// To add a new sound
+  ///   1.  add sound file to assets/sounds/
+  ///   2.  add sound file name to globals.dart
+  ///   3.  add fire PlaySound() events
+  ///
   SoundManager._internal() {
+    /// Event listener for PlaySound events.
     appEventBus.on<PlaySound>().listen((event) {
       _playSound(event.soundFile);
     });
