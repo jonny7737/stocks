@@ -1,9 +1,14 @@
+// ignore_for_file: prefer_const_constructors
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:stocks/src/controllers/portfolio_updated.dart';
 import 'package:stocks/src/controllers/price_change.dart';
+import 'package:stocks/src/models/bus_events.dart';
 import 'package:stocks/src/services/portfolio.dart';
+
+import '../../globals.dart';
 
 class CurrentPosition extends StatelessWidget {
   const CurrentPosition({Key? key}) : super(key: key);
@@ -36,7 +41,8 @@ class CurrentPosition extends StatelessWidget {
             child: Center(
                 child: InkWell(
               onDoubleTap: () {
-                portfolio.notify('Current Position double tap');
+                appEventBus.fire(PortfolioUpdated('Current Position double tap'));
+                appEventBus.fire(PlaySound('pop.mp3'));
               },
               child: Text('Current Position',
                   style: ts.copyWith(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -84,6 +90,9 @@ class CurrentPosition extends StatelessWidget {
                   Consumer(
                     builder: (context, watch, child) {
                       Provider.of<PriceChangeController>(context);
+                      if (!portfolio.doneOnce) {
+                        return Text('- - -', style: ts.copyWith(fontWeight: FontWeight.bold));
+                      }
                       var v = portfolio.currentValue;
                       return Text(
                         NumberFormat.simpleCurrency().format(v),
@@ -107,6 +116,9 @@ class CurrentPosition extends StatelessWidget {
                   Consumer(
                     builder: (context, watch, child) {
                       Provider.of<PriceChangeController>(context);
+                      if (!portfolio.doneOnce) {
+                        return Text('- - -', style: ts.copyWith(fontWeight: FontWeight.bold));
+                      }
                       var pl =
                           portfolio.startingBalance - portfolio.cashOnHand - portfolio.currentValue;
                       if (pl <= 0) {
@@ -139,26 +151,37 @@ class CurrentPosition extends StatelessWidget {
                   var i = portfolio.currentInvestment;
                   double percent = (v - i) / (i);
                   if (v > i) {
-                    return Text(
-                      NumberFormat.decimalPercentPattern(decimalDigits: 2).format(percent),
-                      style: ts.copyWith(fontWeight: FontWeight.bold),
+                    return Row(
+                      children: [
+                        if (!portfolio.doneOnce)
+                          Text('- - -', style: ts.copyWith(fontWeight: FontWeight.bold)),
+                        if (portfolio.doneOnce)
+                          Text(
+                            NumberFormat.decimalPercentPattern(decimalDigits: 2).format(percent),
+                            style: ts.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                      ],
                     );
                   } else {
                     return Row(
                       children: [
-                        const Icon(
-                          Icons.arrow_downward_sharp,
-                          color: Colors.black,
-                          size: 20,
-                        ),
+                        if (!portfolio.doneOnce)
+                          Text('- - -', style: ts.copyWith(fontWeight: FontWeight.bold)),
+                        if (portfolio.doneOnce)
+                          const Icon(
+                            Icons.arrow_downward_sharp,
+                            color: Colors.black,
+                            size: 20,
+                          ),
                         const SizedBox(width: 3),
                         if (percent.isNaN) const SizedBox(width: 37),
-                        if (!percent.isNaN)
-                          Text(
-                            NumberFormat.decimalPercentPattern(decimalDigits: 2)
-                                .format(percent.abs()),
-                            style: ts.copyWith(fontWeight: FontWeight.bold),
-                          ),
+                        if (portfolio.doneOnce)
+                          if (!percent.isNaN)
+                            Text(
+                              NumberFormat.decimalPercentPattern(decimalDigits: 2)
+                                  .format(percent.abs()),
+                              style: ts.copyWith(fontWeight: FontWeight.bold),
+                            ),
                       ],
                     );
                   }

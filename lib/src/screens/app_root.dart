@@ -70,12 +70,8 @@ class MainBody extends StatelessWidget {
         if (rootController.doDummyPrices) const Positioned(top: 10, left: 5, child: DummyPrices()),
 
         // **********************************
-        //  Siren Player
-        // const Positioned(top: 0, child: SirenPlayer()),
-
-        // **********************************
         //  Current Position widget
-        const Positioned(top: 0, child: CurrentPosition()),
+        const Positioned(top: 5, child: CurrentPosition()),
 
         // **********************************
         //  Next open date - time

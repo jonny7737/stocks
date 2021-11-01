@@ -51,8 +51,7 @@ class PriceChanged extends BusEvent {
 class PlaySound extends BusEvent {
   String soundFile;
 
-  PlaySound(EventStatus status, String message, this.soundFile)
-      : super(status: status, message: message);
+  PlaySound(this.soundFile) : super(status: EventStatus.success, message: 'Playing : $soundFile');
 }
 
 class PortfolioUpdated extends BusEvent {

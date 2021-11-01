@@ -23,6 +23,7 @@ class CurrentPrices {
     if (prices[symbol] == newPrice) return;
     prices[symbol] = newPrice;
     appEventBus.fire(PriceChanged(EventStatus.success, '', symbol, newPrice));
+    appEventBus.fire(PlaySound(pop));
   }
 
   /// Return the current price for symbol.

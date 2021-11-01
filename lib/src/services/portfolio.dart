@@ -88,7 +88,6 @@ class Portfolio {
   Future<void> setNextOpen() async {
     String open = await _drp.nextMarketOpen();
     nextOpen = TZDateTime.from(openDate(open), eastern).add(const Duration(hours: 8, minutes: 30));
-
     if (now.weekday <= 5) {
       nextOpen =
           TZDateTime(eastern, now.year, now.month, now.day, nextOpen!.hour, nextOpen!.minute);
@@ -129,10 +128,20 @@ class Portfolio {
     ready = true;
   }
 
+  bool get okToQueryIEX =>
+      now.isAfter(nextOpen!.subtract(const Duration(minutes: 10))) &&
+      now.isBefore(nextClose!.add(const Duration(minutes: 5)));
+
   Future<void> _currentPriceRepeat() async {
-    if (!marketIsOpen &&
-        now.add(const Duration(minutes: 5)).isAfter(nextClose ?? DateTime(0)) &&
-        doneOnce) return;
+    // if (!marketIsOpen &&
+    //     now.add(const Duration(minutes: 5)).isAfter(nextClose ?? DateTime(0)) &&
+    //     doneOnce) return;
+    // print('[$now] okToQueryIEX: $okToQueryIEX');
+
+    if (nextOpen == null) return;
+    if (!okToQueryIEX && doneOnce) {
+      return;
+    }
 
     if (await portfolioIsEmpty) return;
     _cpr.prices.keys.toList().forEach((symbol) async {
@@ -141,9 +150,9 @@ class Portfolio {
         newPrice = await _drp.currentPrice(symbol: symbol);
       } while (newPrice == -double.infinity);
       _cpr.updatePrice(symbol, newPrice);
-      // appEventBus.fire(Notify('$symbol: ${stocks[symbol]!.quantity} shares @ $newPrice'));
     });
     doneOnce = true;
+    soundEnabled = true;
   }
 
   Future<bool> get portfolioReady async {
@@ -153,6 +162,10 @@ class Portfolio {
     return ready;
   }
 
+  /// PriceChanged event listener.
+  ///
+  /// Check for new price hitting
+  /// buy or sell target.
   void checkTargets(event) {
     bool targetHit = false;
     double price = event.newPrice;
@@ -167,7 +180,7 @@ class Portfolio {
       targetHit = true;
     }
     if (targetHit) {
-      appEventBus.fire(PlaySound(EventStatus.success, 'Play', 'TargetHit'));
+      appEventBus.fire(PlaySound(siren1));
     }
   }
 

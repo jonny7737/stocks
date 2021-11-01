@@ -33,7 +33,7 @@ dependencies:
   soundpool: ^2.2.0
   timezone: ^0.8.0
   objectdb: ^1.2.1+1
-  just_audio: ^0.9.15
+  audioplayers: ^0.20.1
 
   iex:
     path: '../iex'
