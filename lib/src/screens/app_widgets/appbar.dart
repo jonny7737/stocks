@@ -2,6 +2,7 @@ import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stocks/src/controllers/app_root.dart';
+import 'package:stocks/src/controllers/new_price_indicator.dart';
 
 import '/src/controllers/navigation.dart';
 import '../../globals.dart';
@@ -71,6 +72,19 @@ class AppBarWidget extends StatelessWidget {
                 Provider.of<AppRootController>(context, listen: false).toggleMenu();
               },
             ),
+          ),
+        ),
+
+        // New price indicator
+        Positioned(
+          top: 0,
+          bottom: 0,
+          right: 200,
+          child: Consumer(
+            builder: (context, watch, child) {
+              Provider.of<NewPriceIndicatorController>(context);
+              return Text(context.read<NewPriceIndicatorController>().indicator);
+            },
           ),
         ),
 

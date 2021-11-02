@@ -15,7 +15,16 @@ class DummyPrices extends StatelessWidget {
         itemCount: pcc.symbols.length,
         separatorBuilder: (BuildContext context, int index) => const Divider(),
         itemBuilder: (BuildContext context, int index) {
-          return Text('${pcc.symbols[index]}  ${pcc.prices[index]}');
+          if (!pcc.watching(pcc.symbols[index])) {
+            return Text(
+              '${pcc.symbols[index]}  ${pcc.prices[index]}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            );
+          }
+          return Text(
+            '${pcc.symbols[index]}  ${pcc.prices[index]}',
+            style: const TextStyle(fontStyle: FontStyle.italic),
+          );
         },
       ),
     );

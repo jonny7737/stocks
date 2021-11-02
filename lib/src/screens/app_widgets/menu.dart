@@ -104,9 +104,9 @@ class MenuWidget extends StatelessWidget {
                   title: Text('Toggle sound effects',
                       style: ts.copyWith(fontWeight: FontWeight.bold, fontSize: 14)),
                   onChanged: (bool? newValue) {
+                    context.read<AppRootController>().toggleMenu();
                     sc.toggleSound(newValue ?? false);
                   },
-                  // context.read(appViewModelProvider).toggleAutoHideActivityWidget,
                 );
               }),
             ),

@@ -16,4 +16,5 @@ class PriceChangeController extends ChangeNotifier {
 
   List<String> get symbols => _cp.prices.keys.toList();
   List<double> get prices => _cp.prices.values.toList();
+  bool watching(String symbol) => _cp.stocks[symbol]!.watch ?? false;
 }

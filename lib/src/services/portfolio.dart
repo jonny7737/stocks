@@ -131,7 +131,7 @@ class Portfolio {
 
   bool get okToQueryIEX =>
       now.isAfter(nextOpen!.subtract(const Duration(minutes: 10))) &&
-      now.isBefore(nextClose!.add(const Duration(minutes: 5)));
+      now.isBefore(nextClose!.add(const Duration(minutes: 10)));
 
   Future<void> _currentPriceRepeat() async {
     // if (!marketIsOpen &&
@@ -139,6 +139,7 @@ class Portfolio {
     //     doneOnce) return;
     // print('[$now] okToQueryIEX: $okToQueryIEX');
 
+    // print('OK to query IEX: $okToQueryIEX');
     if (nextOpen == null) return;
     if (!okToQueryIEX && doneOnce) {
       return;
@@ -150,7 +151,8 @@ class Portfolio {
       do {
         newPrice = await _drp.currentPrice(symbol: symbol);
       } while (newPrice == -double.infinity);
-      _cpr.updatePrice(symbol, newPrice);
+      // _cpr.updatePrice(symbol, newPrice);
+      appEventBus.fire(PriceChange(EventStatus.in_process, 'Price update', symbol, newPrice));
     });
     doneOnce = true;
   }
@@ -193,6 +195,7 @@ class Portfolio {
       maxLoops--;
       if (maxLoops == 0) return true;
     }
+    // print('Portfolio is empty: ${_cpr.prices.isEmpty}');
     return _cpr.prices.isEmpty;
   }
 

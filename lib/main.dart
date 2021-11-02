@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:stocks/src/controllers/app_root.dart';
+import 'package:stocks/src/controllers/new_price_indicator.dart';
 import 'package:stocks/src/controllers/pop_sound.dart';
 import 'package:stocks/src/controllers/portfolio_updated.dart';
 import 'package:stocks/src/controllers/price_change.dart';
@@ -32,6 +33,7 @@ void main() async {
 
   currentPrices = CurrentPrices();
   SoundManager();
+  NewPriceIndicatorController();
 
   final settingsController = SettingsController(SettingsService());
   await settingsController.loadSettings();
@@ -59,6 +61,9 @@ void main() async {
       ListenableProvider<SoundController>(
         create: (_) => SoundController(),
       ),
+      ListenableProvider<NewPriceIndicatorController>(
+        create: (_) => NewPriceIndicatorController(),
+      ),
     ],
     child: StocksApp(settingsController: settingsController),
   ));
@@ -79,15 +84,25 @@ void eventLog(event) {
   String _now = DateFormat("Hms").format(DateTime.now());
   switch (event.runtimeType) {
     case PriceChange:
-      PriceChange e = event;
-      // ignore: avoid_print
-      print('=:[$_now]  ${e.runtimeType} : ${e.message} - ${e.symbol} : ${e.newPrice}');
       break;
     case PriceChanged:
-      PriceChanged e = event;
-      // ignore: avoid_print
-      print('=:[$_now]  ${e.runtimeType} : ${e.message} - ${e.symbol} : ${e.newPrice}');
+      bool watching = currentPrices.stocks[event.symbol]!.watch ?? false;
+      if (watching) {
+        // ignore: avoid_print
+        print(
+            '=:[$_now]  ${event.runtimeType}[watching] : ${event.message} - ${event.symbol} : ${event.newPrice}');
+      } else {
+        // ignore: avoid_print
+        print(
+            '=:[$_now]  ${event.runtimeType}           : ${event.message} - ${event.symbol} : ${event.newPrice}');
+      }
       break;
+
+    //  Filter these messages
+    case PlaySound:
+      break;
+
+    //  Default message format
     default:
       BusEvent e = event;
       // ignore: avoid_print
