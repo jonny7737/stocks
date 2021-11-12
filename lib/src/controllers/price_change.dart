@@ -16,8 +16,11 @@ class PriceChangeController with ChangeNotifier {
 
   List<String> get symbols => _cp.listOfSymbols;
   List<double> get prices => _cp.listOfPrices;
+  double currentPrice(String symbol) => _cp.price(symbol);
   bool watching(String symbol) => _cp.stocks[symbol]!.watch ?? false;
   double quantity(String symbol) => _cp.stocks[symbol]!.quantity;
   double costPerShare(String symbol) =>
       double.parse((_cp.stocks[symbol]!.cost / _cp.stocks[symbol]!.quantity).toStringAsFixed(3));
+  double watchingCost(symbol) =>
+      watching(symbol) ? double.parse(_cp.stocks[symbol]!.cost.toStringAsFixed(3)) : 0.0;
 }

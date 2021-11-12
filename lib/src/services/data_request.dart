@@ -33,6 +33,10 @@ class DataRequestService extends ChangeNotifier {
     ]);
   }
 
+  Future<String> getCoNameBySymbol(String symbol) async {
+    return await _drp.getCoNameBySymbol(symbol);
+  }
+
   Future<List<ChartData>> intraDay(String symbol) async {
     return await _drp.intraDay(symbol);
   }

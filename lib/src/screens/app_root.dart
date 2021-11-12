@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:stocks/src/controllers/app_root.dart';
 import 'package:stocks/src/controllers/portfolio_updated.dart';
+import 'package:stocks/src/screens/app_widgets/cards.dart';
 import 'package:stocks/src/screens/app_widgets/confetti.dart';
 import 'package:stocks/src/screens/app_widgets/dummy_prices.dart';
 import 'package:stocks/src/screens/app_widgets/menu.dart';
@@ -76,6 +77,10 @@ class MainBody extends StatelessWidget {
         // **********************************
         //  Next open date - time
         const Positioned(top: 10, right: 10, child: NextOpen()),
+
+        // **********************************
+        //  Stock cards
+        const Positioned(top: 50, right: 10, child: CardsWidget()),
 
         // **********************************
         //  Menu
