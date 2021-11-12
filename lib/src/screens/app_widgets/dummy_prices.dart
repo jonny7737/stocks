@@ -9,7 +9,7 @@ class DummyPrices extends StatelessWidget {
   Widget build(BuildContext context) {
     PriceChangeController pcc = Provider.of<PriceChangeController>(context);
     return SizedBox(
-      width: 150,
+      width: 250,
       height: 250,
       child: ListView.separated(
         itemCount: pcc.symbols.length,
@@ -17,7 +17,8 @@ class DummyPrices extends StatelessWidget {
         itemBuilder: (BuildContext context, int index) {
           if (!pcc.watching(pcc.symbols[index])) {
             return Text(
-              '${pcc.symbols[index]}  ${pcc.prices[index]}',
+              '${pcc.symbols[index]}  ${pcc.quantity(pcc.symbols[index])}'
+              ' @ [\$${pcc.costPerShare(pcc.symbols[index])}] \$${pcc.prices[index]}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             );
           }

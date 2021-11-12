@@ -4,7 +4,7 @@ import '/src/globals.dart';
 import '/src/models/bus_events.dart';
 
 class NewPriceIndicatorController extends ChangeNotifier {
-  List indicatorChars = ['-', '\\', '|', '/'];
+  List indicatorChars = ['-', '\\', '*', '|', '/'];
   int indicatorIndex = 0;
 
   NewPriceIndicatorController() {

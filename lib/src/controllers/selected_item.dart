@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '/src/globals.dart';
 import '/src/models/bus_events.dart';
 
-class SelectedItemController extends ChangeNotifier {
+class SelectedItemController with ChangeNotifier {
   int selectedItem = -1;
 
   void select(int itemIndex) {

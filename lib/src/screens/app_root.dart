@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:stocks/src/controllers/app_root.dart';
 import 'package:stocks/src/controllers/portfolio_updated.dart';
 import 'package:stocks/src/screens/app_widgets/confetti.dart';
-import 'package:stocks/src/screens/app_widgets/current_position.dart';
 import 'package:stocks/src/screens/app_widgets/dummy_prices.dart';
 import 'package:stocks/src/screens/app_widgets/menu.dart';
 import 'package:stocks/src/screens/app_widgets/next_open.dart';
@@ -11,6 +10,7 @@ import 'package:stocks/src/screens/sample_feature/sample_item_details_view.dart'
 
 import '/src/controllers/navigation.dart';
 import 'app_widgets/appbar.dart';
+import 'app_widgets/current_position.dart';
 
 /// Displays application content.
 class AppRootView extends StatelessWidget {

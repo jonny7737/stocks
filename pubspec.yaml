@@ -18,7 +18,7 @@ dependencies:
   # localization helper
   intl: ^0.17.0
   # localization automation
-  intl_utils: ^2.4.1
+  intl_utils: ^2.5.1
   # custom fonts
   google_fonts: ^2.1.0
   # value objects
@@ -34,6 +34,8 @@ dependencies:
   timezone: ^0.8.0
   objectdb: ^1.2.1+1
   audioplayers: ^0.20.1
+  syncfusion_flutter_charts: ^19.3.48
+  quiver: ^3.0.1+1
 
   iex:
     path: '../iex'

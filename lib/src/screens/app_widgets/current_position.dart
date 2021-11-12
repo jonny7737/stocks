@@ -1,11 +1,12 @@
-// ignore_for_file: prefer_const_constructors
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:stocks/src/controllers/backfill_complete.dart';
 import 'package:stocks/src/controllers/portfolio_updated.dart';
 import 'package:stocks/src/controllers/price_change.dart';
 import 'package:stocks/src/models/bus_events.dart';
+import 'package:stocks/src/screens/app_widgets/today_chart_w.dart';
+import 'package:stocks/src/services/cash_balance.dart';
 import 'package:stocks/src/services/portfolio.dart';
 
 import '../../globals.dart';
@@ -54,9 +55,10 @@ class CurrentPosition extends StatelessWidget {
               top: 2,
               child: Consumer(
                 builder: (context, watch, child) {
-                  var p = portfolio;
+                  var cb = context.watch<CashBalance>();
+                  // var p = portfolio;
                   return Text(
-                    NumberFormat.simpleCurrency().format(p.startingBalance),
+                    NumberFormat.simpleCurrency().format(cb.totalDeposits),
                     style: ts,
                   );
                 },
@@ -70,7 +72,8 @@ class CurrentPosition extends StatelessWidget {
                   const Text('Available cash', style: ts),
                   Consumer(
                     builder: (context, watch, child) {
-                      var cash = portfolio.cashOnHand;
+                      var cash = context.watch<CashBalance>().cashOnHand;
+                      // var cash = portfolio.cashOnHand;
                       return Text(NumberFormat.simpleCurrency().format(cash),
                           style: ts.copyWith(fontWeight: FontWeight.bold));
                     },
@@ -119,17 +122,15 @@ class CurrentPosition extends StatelessWidget {
                       if (!portfolio.doneOnce) {
                         return Text('- - -', style: ts.copyWith(fontWeight: FontWeight.bold));
                       }
-                      var pl =
-                          portfolio.startingBalance - portfolio.cashOnHand - portfolio.currentValue;
-                      if (pl <= 0) {
+                      if (portfolio.posPL >= 0) {
                         return Text(
-                          NumberFormat.simpleCurrency().format(pl),
+                          NumberFormat.simpleCurrency().format(portfolio.posPL),
                           style: ts.copyWith(fontWeight: FontWeight.bold),
                         );
                       }
 
                       return Text(
-                        '(${NumberFormat.simpleCurrency().format(pl)})',
+                        '(${NumberFormat.simpleCurrency().format(portfolio.posPL.abs())})',
                         style: ts.copyWith(fontWeight: FontWeight.bold),
                       );
                     },
@@ -191,7 +192,16 @@ class CurrentPosition extends StatelessWidget {
           ),
 
           //  Today at a glance
-          // Positioned(top: 60, bottom: 0, left: 0, right: 0, child: TodayChartWidget()),
+          Positioned(
+            top: 60,
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Consumer(builder: (context, watch, child) {
+              Provider.of<BackfillCompleteController>(context);
+              return TodayChartWidget();
+            }),
+          ),
         ],
       ),
     );

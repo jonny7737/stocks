@@ -4,7 +4,7 @@ import 'package:stocks/src/repositories/current_prices.dart';
 import '/src/globals.dart';
 import '/src/models/bus_events.dart';
 
-class PriceChangeController extends ChangeNotifier {
+class PriceChangeController with ChangeNotifier {
   final CurrentPrices _cp = CurrentPrices();
 
   PriceChangeController() {
@@ -14,7 +14,10 @@ class PriceChangeController extends ChangeNotifier {
     });
   }
 
-  List<String> get symbols => _cp.prices.keys.toList();
-  List<double> get prices => _cp.prices.values.toList();
+  List<String> get symbols => _cp.listOfSymbols;
+  List<double> get prices => _cp.listOfPrices;
   bool watching(String symbol) => _cp.stocks[symbol]!.watch ?? false;
+  double quantity(String symbol) => _cp.stocks[symbol]!.quantity;
+  double costPerShare(String symbol) =>
+      double.parse((_cp.stocks[symbol]!.cost / _cp.stocks[symbol]!.quantity).toStringAsFixed(3));
 }

@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:stocks/src/controllers/portfolio_updated.dart';
-import 'package:stocks/src/services/portfolio.dart';
+import 'package:stocks/src/controllers/market_info.dart';
+import 'package:stocks/src/services/market_info.dart';
 
 class NextOpen extends StatelessWidget {
   const NextOpen({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    ///  Portfolio service reference
-    final Portfolio portfolio = Portfolio();
+    final MarketInfo m = MarketInfo();
 
-    Provider.of<PortfolioUpdateController>(context);
+    Provider.of<MarketInfoController>(context);
     return Column(
       children: [
-        Text(portfolio.nextOpen.toString()),
-        if (portfolio.marketIsOpen) Text(portfolio.nextClose.toString()),
-        if (!portfolio.marketIsOpen) const Text('Market Closed'),
+        Text(m.nextOpen.toString()),
+        if (m.marketIsOpen) Text(m.nextClose.toString()),
+        if (!m.marketIsOpen) const Text('Market Closed'),
       ],
     );
   }

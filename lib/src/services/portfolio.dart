@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:iex/iex.dart';
-import 'package:intl/intl.dart';
 import 'package:objectdb/objectdb.dart';
 // ignore: implementation_imports
 import 'package:objectdb/src/objectdb_storage_filesystem.dart' show FileSystemStorage;
@@ -10,40 +8,43 @@ import 'package:path_provider/path_provider.dart' show getApplicationDocumentsDi
 import 'package:stocks/src/globals.dart';
 import 'package:stocks/src/models/bus_events.dart';
 import 'package:stocks/src/models/stock.dart';
-import 'package:stocks/src/models/transaction.dart';
+import 'package:stocks/src/models/ta.dart';
 import 'package:stocks/src/repositories/current_prices.dart';
-import 'package:stocks/src/services/utils.dart';
+import 'package:stocks/src/repositories/daily_pl.dart';
 import 'package:timezone/standalone.dart';
 import 'package:timezone/timezone.dart';
 
+import 'cash_balance.dart';
+import 'data_request.dart';
+import 'market_info.dart';
+
 class Portfolio {
   final CurrentPrices _cpr = CurrentPrices();
-  late DataRequestProcessor _drp;
+  final CashBalance _cb = CashBalance();
+  final DataRequestService _drs = DataRequestService();
+  final MarketInfo m = MarketInfo();
+  final DailyPL _pl = DailyPL();
+
   late Timer currentPriceTimer;
   late ObjectDB db;
 
   static const Duration stockCheckInterval = Duration(seconds: 10);
 
   // final Map<String, Stock> stocks = {};
-  Map<DateTime, Transaction> transactions = {};
+  Map<DateTime, TA> transactions = {};
   bool loadingTransactionDB = false;
+  bool creatingDB = false;
   bool ready = false;
   bool doneOnce = false;
-
-  TZDateTime? nextOpen;
-  TZDateTime? nextClose;
-  Timer? marketCheckTimer;
-  Location eastern = getLocation('US/Eastern');
-  Location central = getLocation('US/Central');
 
   /// Getter now returns TZDateTime.now(eastern)
   TZDateTime get now => TZDateTime.now(eastern);
 
   Map<String, Stock> get stocks => _cpr.stocks;
 
-  double _cashOnHand = 0.00;
+  double get _cashOnHand => _cb.cashOnHand;
 
-  double get cashOnHand => double.parse(_cashOnHand.toStringAsFixed(2));
+  double get cashOnHand => double.parse(_cashOnHand.toStringAsFixed(3));
 
   static Portfolio? _instance;
 
@@ -51,70 +52,20 @@ class Portfolio {
 
   Portfolio._internal() {
     appEventBus.on<PriceChanged>().listen(checkTargets);
-    _drp = DataRequestProcessor(serviceEndPoint);
     initPortfolio();
-    if (marketCheckTimer == null) marketCheck();
   }
 
   Future<void> initPortfolio() async {
     await _openDB();
     appEventBus.fire(Notify('Portfolio process initialized'));
-  }
-
-  void marketCheck() {
-    if (marketCheckTimer == null) {
-      marketCheckTimer = Timer.periodic(const Duration(seconds: 2), checkMarketOC);
-    } else {
-      marketCheckTimer!.cancel();
-      marketCheckTimer = Timer.periodic(const Duration(minutes: 5), checkMarketOC);
-    }
-  }
-
-  int marketCheckCounter = 0;
-  Future<void> checkMarketOC(_) async {
-    if (marketCheckCounter == 5) {
-      marketCheckCounter++;
-      marketCheck();
-      return;
-    }
-    await setNextOpen();
-    await setNextClose();
-    if (marketCheckCounter < 6) marketCheckCounter++;
-  }
-
-  bool get marketIsOpen =>
-      now.isBefore(nextClose ?? DateTime(0)) && now.isAfter(nextOpen ?? DateTime(0));
-
-  Future<void> setNextOpen() async {
-    String open = await _drp.nextMarketOpen();
-    // notify('Market opens: $open');
-    nextOpen = TZDateTime.from(openDate(open), eastern).add(const Duration(hours: 8, minutes: 30));
-    if (now.weekday <= 5) {
-      nextOpen =
-          TZDateTime(eastern, now.year, now.month, now.day, nextOpen!.hour, nextOpen!.minute);
-      // if (now.isAfter(nextClose ?? DateTime(0))) nextOpen = nextOpen!.add(const Duration(days: 1));
-    }
-
-    open = DateFormat("yyyy-MM-dd HH:mm").format(nextOpen ?? DateTime(0));
-    notify('Market opens: $open');
-  }
-
-  Future<void> setNextClose() async {
-    if (nextOpen == null) return;
-
-    var now = TZDateTime.now(central);
-    if (now.day <= nextOpen!.day) {
-      nextClose = TZDateTime(eastern, now.year, now.month, now.day, 16, 00, 00);
-      String close = DateFormat("yyyy-MM-dd HH:mm").format(nextClose ?? DateTime(0));
-      notify('Market closes: $close');
-    }
+    _pl.portfolioReady = true;
   }
 
   Future<void> _openDB() async {
     Directory appDocDir = await getApplicationDocumentsDirectory();
     String dbFilePath = [appDocDir.path, 'transactions.db'].join('/');
 
-    // if (File(dbFilePath).existsSync()) File(dbFilePath).deleteSync();
+    if (File(dbFilePath).existsSync()) File(dbFilePath).deleteSync();
 
     db = ObjectDB(FileSystemStorage(dbFilePath));
     // print('DB path is $dbFilePath');
@@ -129,32 +80,48 @@ class Portfolio {
     ready = true;
   }
 
-  bool get okToQueryIEX =>
-      now.isAfter(nextOpen!.subtract(const Duration(minutes: 10))) &&
-      now.isBefore(nextClose!.add(const Duration(minutes: 10)));
-
   Future<void> _currentPriceRepeat() async {
-    // if (!marketIsOpen &&
-    //     now.add(const Duration(minutes: 5)).isAfter(nextClose ?? DateTime(0)) &&
-    //     doneOnce) return;
-    // print('[$now] okToQueryIEX: $okToQueryIEX');
-
-    // print('OK to query IEX: $okToQueryIEX');
-    if (nextOpen == null) return;
-    if (!okToQueryIEX && doneOnce) {
+    if (!m.okToQueryIEX && doneOnce) {
       return;
     }
 
     if (await portfolioIsEmpty) return;
+    await _updatePrices();
+    // for (var symbol in _cpr.listOfSymbols) {
+    //   late double newPrice;
+    //   do {
+    //     newPrice = await _drs.currentPrice(symbol: symbol);
+    //   } while (newPrice == -double.infinity);
+    //
+    //   /// Report the current price to the price change repository for processing.
+    //   appEventBus.fire(PriceChange(EventStatus.in_process, 'Price update', symbol, newPrice));
+    // }
+    // doneOnce = true;
+
+    // double newPrice = -double.infinity;
+    // _cpr.prices.keys.toList().forEach((symbol) async {
+    //   print('Loading current price for $symbol');
+    //   do {
+    //     newPrice = await _drs.currentPrice(symbol: symbol);
+    //     print('Got current price for $symbol : $newPrice');
+    //   } while (newPrice == -double.infinity);
+    //
+    //   /// Report the current price to the price change repository for processing.
+    //   appEventBus.fire(PriceChange(EventStatus.in_process, 'Price update', symbol, newPrice));
+    // });
+    doneOnce = true;
+  }
+
+  Future<void> _updatePrices() async {
+    double newPrice = -double.infinity;
     _cpr.prices.keys.toList().forEach((symbol) async {
-      late double newPrice;
       do {
-        newPrice = await _drp.currentPrice(symbol: symbol);
+        newPrice = await _drs.currentPrice(symbol: symbol);
       } while (newPrice == -double.infinity);
-      // _cpr.updatePrice(symbol, newPrice);
+
+      /// Report the current price to the price change repository for processing.
       appEventBus.fire(PriceChange(EventStatus.in_process, 'Price update', symbol, newPrice));
     });
-    doneOnce = true;
   }
 
   Future<bool> get portfolioReady async {
@@ -207,6 +174,8 @@ class Portfolio {
     transactions = await transactionsFromDB();
     if (transactions.isNotEmpty) return;
 
+    creatingDB = true;
+
     appEventBus.fire(Notify('Portfolio loading startup data'));
 
     // Setup initial position, not for production.
@@ -220,7 +189,7 @@ class Portfolio {
     depositCash(dollars: 100.00, note: 'Adtl SFT x10');
     depositCash(dollars: 150.00, note: 'Adtl CGC x7@20');
 
-    appEventBus.fire(Notify('Current cash on hand: $cashOnHand'));
+    // appEventBus.fire(Notify('Current cash on hand: $cashOnHand'));
 
     //  Initial positions
     bought(symbol: 'aapl', quantity: 2.0, price: 136.50);
@@ -234,8 +203,10 @@ class Portfolio {
     bought(symbol: 'sft', quantity: 7.0, price: 6.42);
     bought(symbol: 'cgc', quantity: 7.0, price: 20.10);
     sold(symbol: 'aapl', quantity: 6, price: 150.00);
+    sold(symbol: 'cgc', quantity: 11, price: 13.00);
+    bought(symbol: 'cgc', quantity: 10.655, price: 13.42);
 
-    appEventBus.fire(Notify('Current cash on hand: $cashOnHand'));
+    // appEventBus.fire(Notify('Current cash on hand: $cashOnHand'));
 
     //**************************************************************
     //TODO:    Remove these entries after StockWatch UI is complete.
@@ -243,18 +214,20 @@ class Portfolio {
     addWatch(symbol: 'rcat', price: 3.77);
     addWatch(symbol: 'aapl', price: 150.00);
     //**************************************************************
+
+    creatingDB = false;
   }
 
   bool depositCash({required double dollars, String note = ''}) {
-    addMoney(dollars);
-    recordTransaction(Transaction('', 'deposit', 1, dollars, null, note));
+    // addMoney(dollars);
+    recordTransaction(TA('', 'deposit', 1, dollars, null, note));
     return true;
   }
 
   double withdrawCash({required double dollars}) {
     var trans = dollars < cashOnHand ? dollars : cashOnHand;
-    subMoney(trans);
-    recordTransaction(Transaction('', 'withdraw', 1, -trans));
+    // subMoney(trans);
+    recordTransaction(TA('', 'withdraw', 1, -trans));
     return trans;
   }
 
@@ -266,13 +239,10 @@ class Portfolio {
       bool? watch}) {
     symbol = symbol.toUpperCase();
     if (price.isNaN) price = 0;
-    if (!paperTrade && cashOnHand < price * quantity) {
-      appEventBus.fire(Notify('Purchase declined - Insufficient funds'));
+    if (!paperTrade && cashOnHand < price * quantity && !loadingTransactionDB && !creatingDB) {
+      appEventBus.fire(Notify('Purchase declined[$symbol : $cashOnHand] - Insufficient funds'));
       return false;
     }
-    // if (watch == null || !watch) //  Do not log new Watches here
-    //   a.log('bought($symbol, $quantity, $price, $watch)');
-
     appEventBus.fire(PriceChange(EventStatus.in_process, 'Buy transaction', symbol, price));
 
     var s = stocks[symbol] ?? const Stock(0, 0);
@@ -283,15 +253,12 @@ class Portfolio {
     Stock s2 = Stock(quantity + s.quantity, (cost) + s.cost, paperTrade, watch);
     stocks.update(symbol, (v) => s2, ifAbsent: () => s2);
 
-    // cashOnHand -= price * quantity;
-    cost = price * quantity;
+    cost = double.parse((price * quantity).toStringAsFixed(3));
     subMoney(cost);
     if (cost == 0) cost = price;
-    recordTransaction(Transaction(symbol, 'bought', quantity, cost, paperTrade, null, watch));
+    recordTransaction(TA(symbol, 'bought', quantity, cost, paperTrade, null, watch));
 
-    _drp.requestData([
-      {'fn': 'price', 'symbol': symbol}
-    ]);
+    _drs.requestData(symbol);
 
     // appEventBus.fire(Notify(EventStatus.success, 'Portfolio stocks[${stocks.length}]'));
     return true;
@@ -310,61 +277,42 @@ class Portfolio {
     if (quantity == stocks[symbol]!.quantity) {
       stocks.remove(symbol);
     } else {
-      stocks[symbol] = Stock(stocks[symbol]!.quantity - quantity, stocks[symbol]!.cost);
+      stocks[symbol] =
+          Stock(stocks[symbol]!.quantity - quantity, stocks[symbol]!.cost - (quantity * price));
     }
 
-    addMoney(price * quantity);
+    // addMoney(price * quantity);
     appEventBus.fire(PriceChange(EventStatus.in_process, 'Sell transaction', symbol, price));
 
-    recordTransaction(Transaction(symbol, 'sold', quantity, price * quantity));
+    recordTransaction(TA(symbol, 'sold', quantity, price * quantity));
     return true;
   }
 
   void addMoney(double dollars) {
-    _cashOnHand += dollars;
-    notify('Current cash on hand: $cashOnHand');
+    // _cashOnHand += dollars;
+    // notify('Current cash on hand: $cashOnHand');
   }
 
   void subMoney(double dollars) {
-    _cashOnHand -= dollars;
-    notify('Current cash on hand: $cashOnHand');
+    // _cashOnHand -= dollars;
+    // notify('Current cash on hand: $cashOnHand');
   }
 
-  double get totalDeposits {
-    double total = 0.0;
-    transactions.forEach((k, v) {
-      // a.log('Total deposits: ${v.toJson()}');
-      if (v.action == 'deposit') total += v.cost;
-    });
-    return total;
-  }
+  double get totalDeposits => _cb.totalDeposits;
 
-  double get totalWithdrawals {
-    double total = 0.0;
-    transactions.forEach((k, v) {
-      if (v.action == 'withdraw') total += v.cost;
-    });
-    return total;
-  }
+  double get totalWithdrawals => _cb.totalWithdrawals;
 
-  double get startingBalance {
-    return totalDeposits - totalWithdrawals;
-  }
+  double get startingBalance => _cb.startingBalance;
 
-  double get currentValue {
-    double value = 0.0;
+  double get currentValue => _cpr.positionValue();
 
-    stocks.forEach((k, v) {
-      value += v.quantity * _cpr.price(k);
-    });
-    return double.parse(value.toStringAsFixed(2));
-  }
+  double get posPL => _pl.posPL;
 
   double get currentInvestment {
     double value = 0.0;
 
     stocks.forEach((k, v) {
-      value += v.cost;
+      if (v.watch != true) value += v.cost;
     });
     return double.parse(value.toStringAsFixed(2));
   }
@@ -390,7 +338,7 @@ class Portfolio {
     }
     // bool refreshCards = false;
     if (price == -double.infinity) {
-      price = await _drp.currentPrice(symbol: symbol);
+      price = await _drs.currentPrice(symbol: symbol);
       if (price == -double.infinity) {
         // a.log('Unknown symbol: $symbol');
         // appEventBus.fire(WatchEvent(
@@ -437,9 +385,11 @@ class Portfolio {
     return true;
   }
 
-  recordTransaction(Transaction transaction) {
+  recordTransaction(TA transaction) {
     var now = DateTime.now();
     transactions[now] = transaction;
+
+    appEventBus.fire(Transaction(transaction));
 
     // print('[$now]  TransAction recorded: ${transaction.action}');
 
@@ -450,16 +400,23 @@ class Portfolio {
     }
   }
 
-  Future<Map<DateTime, Transaction>> transactionsFromDB() async {
+  /// New procedure for loading from database
+  ///   1.  Load and process deposits
+  ///   2.  Load and process buys
+  ///   3.  Load and process sells
+  ///   4.  Load and process everything else
+
+  Future<Map<DateTime, TA>> transactionsFromDB() async {
     loadingTransactionDB = true;
-    Map<DateTime, Transaction> t = {};
+    Map<DateTime, TA> t = {};
     // while (db == null) await Future.delayed(Duration(milliseconds: 100));
     var recList = await db.find();
     for (var rec in recList) {
       // print('${rec['_id']} : ${rec.toString()}');
       // var dt = DateTime.parse(rec.keys.first);
       var dt = DateTime.now();
-      var ta = Transaction.fromJson(rec as Map<String, dynamic>);
+      var ta = TA.fromJson(rec as Map<String, dynamic>);
+
       t[dt] = ta;
 
       var price = ta.quantity == 0 ? ta.cost : ta.cost / ta.quantity;
@@ -479,7 +436,7 @@ class Portfolio {
     return t;
   }
 
-  Future<void> transactionToDB(DateTime now, Transaction transaction) async {
+  Future<void> transactionToDB(DateTime now, TA transaction) async {
     var jsonMap = transaction.toJson();
     jsonMap['transtime'] = now.toString();
     await db.insert(jsonMap);

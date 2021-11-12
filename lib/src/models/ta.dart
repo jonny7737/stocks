@@ -1,4 +1,6 @@
-class Transaction {
+///
+///   Portfolio transaction model
+class TA {
   final String symbol;
   final String action;
   final double quantity;
@@ -10,10 +12,10 @@ class Transaction {
   final bool? watch;
   final String? dbId;
 
-  Transaction(this.symbol, this.action, this.quantity, this.cost,
+  TA(this.symbol, this.action, this.quantity, this.cost,
       [this.paperTrade = false, this.note, this.watch, this.dbId]);
 
-  Transaction.fromJson(Map<String, dynamic> json)
+  TA.fromJson(Map<String, dynamic> json)
       : symbol = json["symbol"] ?? '',
         action = json["action"],
         quantity = json["quantity"],
